@@ -1,0 +1,36 @@
+name: Deploy to Hetzner VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd ${{ secrets.APP_PATH }}
+
+            echo "Pulling latest changes..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Installing dependencies..."
+            pnpm install --frozen-lockfile
+
+            echo "Building application..."
+            pnpm build
+
+            echo "Restarting PM2..."
+            pm2 restart podio-sync || pm2 start dist/main.js --name podio-sync
+
+            echo "Deployment complete!"
