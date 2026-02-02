@@ -269,6 +269,45 @@ export class PodioService implements OnModuleInit {
     return response.data;
   }
 
+  /**
+   * Add a comment to a Podio item
+   * POST /comment/item/{item_id}
+   *
+   * @param appSlug - The app slug for authentication
+   * @param itemId - The Podio item ID
+   * @param value - The comment text
+   * @param options - Optional settings (hook, silent, alertInvite)
+   * @returns The comment ID and any granted users
+   */
+  async addComment(
+    appSlug: string,
+    itemId: string,
+    value: string,
+    options: { hook?: boolean; silent?: boolean; alertInvite?: boolean } = {},
+  ): Promise<{ comment_id: number; granted_users?: any[] }> {
+    const accessToken = await this.getAccessToken(appSlug);
+    const { hook = true, silent = false, alertInvite = false } = options;
+
+    const response = await axios.post(
+      `${this.baseUrl}/comment/item/${itemId}`,
+      { value },
+      {
+        headers: {
+          'Authorization': `OAuth2 ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        params: {
+          hook,
+          silent,
+          alert_invite: alertInvite,
+        },
+      }
+    );
+
+    this.logger.log(`Comment added to item ${itemId}, comment_id: ${response.data.comment_id}`);
+    return response.data;
+  }
+
   getAppConfig(appSlug: string): PodioAppConfig | undefined {
     return this.apps.find(a => a.slug === appSlug);
   }

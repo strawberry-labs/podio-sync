@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Post,
   Param,
   Body,
   Query,
@@ -23,6 +24,13 @@ interface UpdateFieldDto {
   value: any;
   hook?: boolean;
   silent?: boolean;
+}
+
+interface AddCommentDto {
+  value: string;
+  hook?: boolean;
+  silent?: boolean;
+  alertInvite?: boolean;
 }
 
 /**
@@ -243,6 +251,65 @@ export class PodioApiController {
       };
     } catch (error) {
       this.logger.error(`Failed to get revision diff:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Add a comment to a Podio item
+   * POST /api/podio/:appSlug/items/:itemId/comments
+   *
+   * Body: {
+   *   value: "Comment text here",
+   *   hook: true,        // optional, default true - trigger Podio webhooks
+   *   silent: false,     // optional, default false - don't bump in stream
+   *   alertInvite: false // optional, default false - auto-invite mentioned users
+   * }
+   */
+  @Post(':appSlug/items/:itemId/comments')
+  async addComment(
+    @Param('appSlug') appSlug: string,
+    @Param('itemId') itemId: string,
+    @Body() body: AddCommentDto,
+  ): Promise<any> {
+    this.logger.log(`POST comment on item ${itemId} in app ${appSlug}`);
+
+    this.validateAppSlug(appSlug);
+
+    if (!body.value || typeof body.value !== 'string') {
+      throw new HttpException(
+        {
+          success: false,
+          error: 'value (string) is required',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const result = await this.podioService.addComment(
+        appSlug,
+        itemId,
+        body.value,
+        {
+          hook: body.hook,
+          silent: body.silent,
+          alertInvite: body.alertInvite,
+        },
+      );
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to add comment to item ${itemId}:`, error.response?.data || error.message);
       throw new HttpException(
         {
           success: false,
