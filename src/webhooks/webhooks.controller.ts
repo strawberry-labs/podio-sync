@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Param, Logger, HttpCode } from '@nestjs/common';
 import { PodioService } from '../podio/podio.service';
 import { BasecampService, FieldChange } from '../basecamp/basecamp.service';
+import { PodioAppConfig } from '../config/podio-apps.config';
 
 interface WebhookPayload {
   type: string;
@@ -45,7 +46,7 @@ export class WebhooksController {
         break;
 
       case 'item.update':
-        await this.handleItemUpdate(appSlug, payload, appConfig.monitoredFields);
+        await this.handleItemUpdate(appSlug, payload, appConfig);
         break;
 
       case 'item.create':
@@ -77,10 +78,41 @@ export class WebhooksController {
     }
   }
 
+  private isMonitoredField(
+    fieldDiff: any,
+    appConfig: PodioAppConfig,
+  ): boolean {
+    const externalId = fieldDiff.external_id?.toLowerCase();
+    const label = fieldDiff.label || '';
+
+    // Match by external_id
+    if (appConfig.monitoredFields.includes(externalId)) {
+      return true;
+    }
+
+    // Match by label (case-insensitive exact match)
+    if (appConfig.monitoredFieldLabels?.length) {
+      const labelLower = label.toLowerCase();
+      if (appConfig.monitoredFieldLabels.some(ml => ml.toLowerCase() === labelLower)) {
+        return true;
+      }
+    }
+
+    // Match by label-contains triggers (e.g. "Create Basecamp Event")
+    if (appConfig.labelContainsTriggers?.length) {
+      const labelLower = label.toLowerCase();
+      if (appConfig.labelContainsTriggers.some(trigger => labelLower.includes(trigger.toLowerCase()))) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   private async handleItemUpdate(
     appSlug: string,
     payload: WebhookPayload,
-    monitoredFields: string[],
+    appConfig: PodioAppConfig,
   ): Promise<void> {
     if (!payload.item_id || !payload.item_revision_id) {
       this.logger.error('Missing item_id or item_revision_id');
@@ -107,17 +139,14 @@ export class WebhooksController {
       this.logger.log(`Revision diff for item ${payload.item_id}:`);
       this.logger.log(JSON.stringify(diff, null, 2));
 
-      // Check for monitored field changes
+      // Check for monitored field changes (by external_id, label, or label-contains)
       const monitoredChanges: FieldChange[] = [];
 
       for (const fieldDiff of diff) {
-        const externalId = fieldDiff.external_id?.toLowerCase();
-
-        // Check if this is a monitored field
-        if (monitoredFields.includes(externalId)) {
+        if (this.isMonitoredField(fieldDiff, appConfig)) {
           monitoredChanges.push({
             fieldId: fieldDiff.field_id,
-            externalId: externalId,
+            externalId: fieldDiff.external_id?.toLowerCase() || '',
             label: fieldDiff.label,
             type: fieldDiff.type,
             from: fieldDiff.from,
@@ -126,7 +155,8 @@ export class WebhooksController {
         }
       }
 
-      // Notify Basecamp of monitored field changes
+      // Notify Basecamp of all monitored changes
+      // Basecamp decides action based on the labels (e.g. "Create Basecamp Event" = create event)
       if (monitoredChanges.length > 0) {
         this.logger.log(`>>> MONITORED FIELD CHANGES DETECTED:`);
         for (const change of monitoredChanges) {

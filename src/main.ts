@@ -14,6 +14,7 @@ async function bootstrap() {
   logger.log(`  - POST /webhook/camp-sales`);
   logger.log(`  - POST /webhook/ia-sales`);
   logger.log(`  - POST /webhook/overseas-camp-sales`);
+  logger.log(`  - POST /webhook/schools`);
   logger.log(`  - POST /webhook/opportunities`);
 }
 bootstrap();

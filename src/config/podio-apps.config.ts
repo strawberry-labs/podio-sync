@@ -3,8 +3,12 @@ export interface PodioAppConfig {
   slug: string; // URL-friendly name for webhook route
   appId: string;
   appToken: string;
-  // Fields to monitor for changes - when these change, trigger basecamp sync
+  // Fields to monitor by external_id - when these change, trigger basecamp sync
   monitoredFields: string[];
+  // Fields to monitor by label (display name) - case-insensitive match
+  monitoredFieldLabels?: string[];
+  // If any changed field's label contains one of these strings, trigger sync
+  labelContainsTriggers?: string[];
   // Fields that trigger event creation on Basecamp
   eventCreationTriggerField?: string;
   eventCreationTriggerValue?: string;
@@ -25,11 +29,21 @@ export const getPodioConfig = (): PodioConfig => ({
       slug: 'camp-sales',
       appId: process.env.PODIO_APP_CAMP_SALES_ID || '',
       appToken: process.env.PODIO_APP_CAMP_SALES_TOKEN || '',
-      monitoredFields: [
-        'registration-end-date',
-        'event-dates',
-        'teacher',
-        'additional-school-charge',
+      monitoredFields: [],
+      monitoredFieldLabels: [
+        'Sale Title',
+        'Location 1',
+        'Group 1 Dates',
+        'Registration Close Date',
+        'Signup Deadline',
+        'School',
+        'Primary Contact',
+        'Payments Managed By',
+        'Total Expected Students',
+        'Executive body',
+      ],
+      labelContainsTriggers: [
+        'Create Basecamp Event',
       ],
       eventCreationTriggerField: 'create-on-basecamp',
       eventCreationTriggerValue: 'yes',
@@ -59,6 +73,13 @@ export const getPodioConfig = (): PodioConfig => ({
       ],
       eventCreationTriggerField: 'create-on-basecamp',
       eventCreationTriggerValue: 'yes',
+    },
+    {
+      name: 'Schools',
+      slug: 'schools',
+      appId: process.env.PODIO_APP_SCHOOLS_ID || '',
+      appToken: process.env.PODIO_APP_SCHOOLS_TOKEN || '',
+      monitoredFields: [],
     },
     {
       name: 'Opportunities',
