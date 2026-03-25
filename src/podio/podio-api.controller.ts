@@ -5,14 +5,13 @@ import {
   Post,
   Param,
   Body,
-  Query,
   Logger,
   HttpException,
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
 import { PodioService } from './podio.service';
-import { ApiKeyGuard } from '../common/guards';
+import { ApiKeyGuard, ApiAccess, RequireAccess } from '../common/guards';
 
 interface UpdateItemDto {
   fields: any[];
@@ -34,9 +33,10 @@ interface AddCommentDto {
 }
 
 /**
- * REST API endpoints for Basecamp to interact with Podio
- * These endpoints abstract the Podio API and handle authentication internally
- * Protected by API key authentication
+ * REST API endpoints for interacting with Podio.
+ * Protected by API key authentication with tiered access:
+ *   - GET endpoints: accessible with read-only or full-access key
+ *   - PUT/POST endpoints: require full-access key
  */
 @Controller('api/podio')
 @UseGuards(ApiKeyGuard)
@@ -50,6 +50,7 @@ export class PodioApiController {
    * GET /api/podio/:appSlug/items/:itemId
    */
   @Get(':appSlug/items/:itemId')
+  @RequireAccess(ApiAccess.READ_ONLY)
   async getItem(
     @Param('appSlug') appSlug: string,
     @Param('itemId') itemId: string,
@@ -81,6 +82,7 @@ export class PodioApiController {
    * GET /api/podio/:appSlug/items/:itemId/values
    */
   @Get(':appSlug/items/:itemId/values')
+  @RequireAccess(ApiAccess.READ_ONLY)
   async getItemValues(
     @Param('appSlug') appSlug: string,
     @Param('itemId') itemId: string,
@@ -110,17 +112,9 @@ export class PodioApiController {
   /**
    * Update an item with new field values
    * PUT /api/podio/:appSlug/items/:itemId
-   *
-   * Body: {
-   *   fields: [
-   *     { "external_id": "field-name", "values": [{ "value": "new value" }] },
-   *     ...
-   *   ],
-   *   hook: true,   // optional, default true - trigger Podio webhooks
-   *   silent: false // optional, default false - don't bump in stream
-   * }
    */
   @Put(':appSlug/items/:itemId')
+  @RequireAccess(ApiAccess.FULL_ACCESS)
   async updateItem(
     @Param('appSlug') appSlug: string,
     @Param('itemId') itemId: string,
@@ -168,14 +162,9 @@ export class PodioApiController {
   /**
    * Update a single field on an item
    * PUT /api/podio/:appSlug/items/:itemId/fields/:fieldId
-   *
-   * Body: {
-   *   value: [{ "value": "new value" }] or "simple value" depending on field type,
-   *   hook: true,   // optional
-   *   silent: false // optional
-   * }
    */
   @Put(':appSlug/items/:itemId/fields/:fieldId')
+  @RequireAccess(ApiAccess.FULL_ACCESS)
   async updateItemField(
     @Param('appSlug') appSlug: string,
     @Param('itemId') itemId: string,
@@ -227,6 +216,7 @@ export class PodioApiController {
    * GET /api/podio/:appSlug/items/:itemId/revisions/:from/:to
    */
   @Get(':appSlug/items/:itemId/revisions/:from/:to')
+  @RequireAccess(ApiAccess.READ_ONLY)
   async getRevisionDiff(
     @Param('appSlug') appSlug: string,
     @Param('itemId') itemId: string,
@@ -264,15 +254,9 @@ export class PodioApiController {
   /**
    * Add a comment to a Podio item
    * POST /api/podio/:appSlug/items/:itemId/comments
-   *
-   * Body: {
-   *   value: "Comment text here",
-   *   hook: true,        // optional, default true - trigger Podio webhooks
-   *   silent: false,     // optional, default false - don't bump in stream
-   *   alertInvite: false // optional, default false - auto-invite mentioned users
-   * }
    */
   @Post(':appSlug/items/:itemId/comments')
+  @RequireAccess(ApiAccess.FULL_ACCESS)
   async addComment(
     @Param('appSlug') appSlug: string,
     @Param('itemId') itemId: string,

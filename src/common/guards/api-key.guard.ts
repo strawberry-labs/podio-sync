@@ -3,23 +3,31 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { ApiAccess, REQUIRED_ACCESS_KEY } from '../decorators/api-access.decorator';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   private readonly logger = new Logger(ApiKeyGuard.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly reflector: Reflector,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     const apiKey = this.extractApiKey(request);
-    const sharedSecret = this.configService.get<string>('SHARED_SECRET');
 
-    if (!sharedSecret) {
+    const fullAccessKey = this.configService.get<string>('SHARED_SECRET');
+    const readOnlyKey = this.configService.get<string>('API_KEY_READ_ONLY');
+
+    if (!fullAccessKey) {
       this.logger.error('SHARED_SECRET not configured in environment');
       throw new UnauthorizedException('Server configuration error');
     }
@@ -29,9 +37,26 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('API key is required');
     }
 
-    if (apiKey !== sharedSecret) {
+    // Determine caller's access tier
+    let callerAccess: ApiAccess;
+    if (apiKey === fullAccessKey) {
+      callerAccess = ApiAccess.FULL_ACCESS;
+    } else if (readOnlyKey && apiKey === readOnlyKey) {
+      callerAccess = ApiAccess.READ_ONLY;
+    } else {
       this.logger.warn(`Invalid API key attempt from ${request.ip}`);
       throw new UnauthorizedException('Invalid API key');
+    }
+
+    // Check endpoint's required access level (defaults to FULL_ACCESS)
+    const requiredAccess = this.reflector.getAllAndOverride<ApiAccess>(
+      REQUIRED_ACCESS_KEY,
+      [context.getHandler(), context.getClass()],
+    ) ?? ApiAccess.FULL_ACCESS;
+
+    if (requiredAccess === ApiAccess.FULL_ACCESS && callerAccess === ApiAccess.READ_ONLY) {
+      this.logger.warn(`Read-only key attempted write operation: ${request.method} ${request.path}`);
+      throw new ForbiddenException('Read-only API key cannot access this endpoint');
     }
 
     return true;
