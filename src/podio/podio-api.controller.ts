@@ -5,6 +5,7 @@ import {
   Post,
   Param,
   Body,
+  Query,
   Logger,
   HttpException,
   HttpStatus,
@@ -44,6 +45,95 @@ export class PodioApiController {
   private readonly logger = new Logger(PodioApiController.name);
 
   constructor(private readonly podioService: PodioService) {}
+
+  /**
+   * List items in an app
+   * GET /api/podio/:appSlug/items?limit=30&offset=0&sort_by=created_on&sort_desc=true
+   */
+  @Get(':appSlug/items')
+  @RequireAccess(ApiAccess.READ_ONLY)
+  async listItems(
+    @Param('appSlug') appSlug: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('sort_by') sortBy?: string,
+    @Query('sort_desc') sortDesc?: string,
+  ): Promise<any> {
+    this.logger.log(`GET items from app ${appSlug}`);
+
+    this.validateAppSlug(appSlug);
+
+    try {
+      const result = await this.podioService.getItems(appSlug, {
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+        sortBy,
+        sortDesc: sortDesc !== undefined ? sortDesc === 'true' : undefined,
+      });
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to list items for ${appSlug}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Filter items in an app
+   * POST /api/podio/:appSlug/items/filter
+   */
+  @Post(':appSlug/items/filter')
+  @RequireAccess(ApiAccess.READ_ONLY)
+  async filterItems(
+    @Param('appSlug') appSlug: string,
+    @Body() body: {
+      filters?: Record<string, any>;
+      limit?: number;
+      offset?: number;
+      sort_by?: string;
+      sort_desc?: boolean;
+    },
+  ): Promise<any> {
+    this.logger.log(`POST filter items in app ${appSlug}`);
+
+    this.validateAppSlug(appSlug);
+
+    try {
+      const result = await this.podioService.filterItems(
+        appSlug,
+        body.filters || {},
+        {
+          limit: body.limit,
+          offset: body.offset,
+          sortBy: body.sort_by,
+          sortDesc: body.sort_desc,
+        },
+      );
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to filter items for ${appSlug}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   /**
    * Get full item details from Podio

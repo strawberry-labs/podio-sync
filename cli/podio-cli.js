@@ -152,6 +152,63 @@ const commands = {
     output(json);
   },
 
+  // -- List items -----------------------------------------------------------
+
+  async list(args) {
+    const appSlug = stripFlags(args)[0];
+    if (!appSlug) {
+      output({ error: 'Usage: podio-cli list <app-slug> [--limit N] [--offset N] [--sort-by field] [--sort-desc]' }, 1);
+    }
+
+    const params = new URLSearchParams();
+    const limit = getFlagValue(args, '--limit');
+    const offset = getFlagValue(args, '--offset');
+    const sortBy = getFlagValue(args, '--sort-by');
+    if (limit) params.set('limit', limit);
+    if (offset) params.set('offset', offset);
+    if (sortBy) params.set('sort_by', sortBy);
+    if (args.includes('--sort-desc')) params.set('sort_desc', 'true');
+
+    const qs = params.toString();
+    const result = await apiCall('GET', `/api/podio/${appSlug}/items${qs ? '?' + qs : ''}`);
+    output(result);
+  },
+
+  // -- Filter items ---------------------------------------------------------
+
+  async filter(args) {
+    const positional = stripFlags(args);
+    const appSlug = positional[0];
+    const filtersJson = positional[1];
+    if (!appSlug) {
+      output({
+        error: 'Usage: podio-cli filter <app-slug> [\'<filters-json>\'] [--limit N] [--offset N] [--sort-by field] [--sort-desc]',
+        example: 'podio-cli filter camp-sales \'{"status": 1}\' --limit 10',
+      }, 1);
+    }
+
+    let filters = {};
+    if (filtersJson) {
+      try {
+        filters = JSON.parse(filtersJson);
+      } catch {
+        output({ error: 'Invalid JSON for filters argument' }, 1);
+      }
+    }
+
+    const body = { filters };
+    const limit = getFlagValue(args, '--limit');
+    const offset = getFlagValue(args, '--offset');
+    const sortBy = getFlagValue(args, '--sort-by');
+    if (limit) body.limit = parseInt(limit, 10);
+    if (offset) body.offset = parseInt(offset, 10);
+    if (sortBy) body.sort_by = sortBy;
+    if (args.includes('--sort-desc')) body.sort_desc = true;
+
+    const result = await apiCall('POST', `/api/podio/${appSlug}/items/filter`, body);
+    output(result);
+  },
+
   // -- Get full item --------------------------------------------------------
 
   async get(args) {
@@ -273,6 +330,8 @@ const commands = {
         'setup --url <base-url> --key <api-key>': 'Configure API connection (one-time)',
         'config': 'Show current configuration',
         'apps': 'List all configured Podio apps',
+        'list <app-slug>': 'List items in an app (with pagination)',
+        'filter <app-slug> [filters-json]': 'Filter items in an app',
         'get <app-slug> <item-id>': 'Get full item details',
         'values <app-slug> <item-id>': 'Get item field values only',
         'diff <app-slug> <item-id> <from> <to>': 'Get revision diff between two revisions',
@@ -281,12 +340,19 @@ const commands = {
         'comment <app-slug> <item-id> <text>': 'Add a comment to an item (requires full-access key)',
       },
       flags: {
-        '--silent': 'Don\'t bump the item in Podio activity stream (update/update-field/comment)',
-        '--no-hook': 'Don\'t trigger Podio webhooks (update/update-field/comment)',
+        '--limit N': 'Number of items to return (default 30, max 500) — list/filter',
+        '--offset N': 'Number of items to skip for pagination — list/filter',
+        '--sort-by field': 'Field to sort by (e.g. created_on, title) — list/filter',
+        '--sort-desc': 'Sort in descending order — list/filter',
+        '--silent': 'Don\'t bump the item in Podio activity stream — update/update-field/comment',
+        '--no-hook': 'Don\'t trigger Podio webhooks — update/update-field/comment',
       },
       examples: [
         'podio-cli setup --url https://podio.example.com --key abc123',
         'podio-cli apps',
+        'podio-cli list camp-sales',
+        'podio-cli list camp-sales --limit 10 --offset 20',
+        'podio-cli filter camp-sales \'{"status": 1}\' --limit 5',
         'podio-cli get camp-sales 1234567',
         'podio-cli values camp-sales 1234567',
         'podio-cli diff camp-sales 1234567 3 4',

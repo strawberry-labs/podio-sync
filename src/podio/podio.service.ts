@@ -308,6 +308,72 @@ export class PodioService implements OnModuleInit {
     return response.data;
   }
 
+  /**
+   * Get items for an app
+   * GET /item/app/{app_id}
+   */
+  async getItems(
+    appSlug: string,
+    options: { limit?: number; offset?: number; sortBy?: string; sortDesc?: boolean } = {},
+  ): Promise<any> {
+    const app = this.getAppConfig(appSlug);
+    if (!app) throw new Error(`No app found with slug: ${appSlug}`);
+
+    const accessToken = await this.getAccessToken(appSlug);
+    const { limit = 30, offset = 0, sortBy, sortDesc } = options;
+
+    const params: Record<string, any> = { limit, offset };
+    if (sortBy) params.sort_by = sortBy;
+    if (sortDesc !== undefined) params.sort_desc = sortDesc;
+
+    const response = await axios.get(
+      `${this.baseUrl}/item/app/${app.appId}`,
+      {
+        headers: { 'Authorization': `OAuth2 ${accessToken}` },
+        params,
+      },
+    );
+
+    return response.data;
+  }
+
+  /**
+   * Filter items in an app
+   * POST /item/app/{app_id}/filter/
+   */
+  async filterItems(
+    appSlug: string,
+    filters: Record<string, any> = {},
+    options: { limit?: number; offset?: number; sortBy?: string; sortDesc?: boolean } = {},
+  ): Promise<any> {
+    const app = this.getAppConfig(appSlug);
+    if (!app) throw new Error(`No app found with slug: ${appSlug}`);
+
+    const accessToken = await this.getAccessToken(appSlug);
+    const { limit = 30, offset = 0, sortBy, sortDesc } = options;
+
+    const body: Record<string, any> = {
+      filters,
+      limit,
+      offset,
+    };
+    if (sortBy) body.sort_by = sortBy;
+    if (sortDesc !== undefined) body.sort_desc = sortDesc;
+
+    const response = await axios.post(
+      `${this.baseUrl}/item/app/${app.appId}/filter/`,
+      body,
+      {
+        headers: {
+          'Authorization': `OAuth2 ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    );
+
+    return response.data;
+  }
+
   getAppConfig(appSlug: string): PodioAppConfig | undefined {
     return this.apps.find(a => a.slug === appSlug);
   }
