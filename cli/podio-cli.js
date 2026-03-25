@@ -157,17 +157,20 @@ const commands = {
   async list(args) {
     const appSlug = stripFlags(args)[0];
     if (!appSlug) {
-      output({ error: 'Usage: podio-cli list <app-slug> [--limit N] [--offset N] [--sort-by field] [--sort-desc]' }, 1);
+      output({ error: 'Usage: podio-cli list <app-slug> [--slim] [--fields f1,f2] [--limit N] [--offset N] [--sort-by field] [--sort-desc]' }, 1);
     }
 
     const params = new URLSearchParams();
     const limit = getFlagValue(args, '--limit');
     const offset = getFlagValue(args, '--offset');
     const sortBy = getFlagValue(args, '--sort-by');
+    const fields = getFlagValue(args, '--fields');
     if (limit) params.set('limit', limit);
     if (offset) params.set('offset', offset);
     if (sortBy) params.set('sort_by', sortBy);
     if (args.includes('--sort-desc')) params.set('sort_desc', 'true');
+    if (args.includes('--slim') || fields) params.set('slim', 'true');
+    if (fields) params.set('fields', fields);
 
     const qs = params.toString();
     const result = await apiCall('GET', `/api/podio/${appSlug}/items${qs ? '?' + qs : ''}`);
@@ -182,8 +185,8 @@ const commands = {
     const filtersJson = positional[1];
     if (!appSlug) {
       output({
-        error: 'Usage: podio-cli filter <app-slug> [\'<filters-json>\'] [--limit N] [--offset N] [--sort-by field] [--sort-desc]',
-        example: 'podio-cli filter camp-sales \'{"status": 1}\' --limit 10',
+        error: 'Usage: podio-cli filter <app-slug> [\'<filters-json>\'] [--slim] [--fields f1,f2] [--limit N] [--offset N] [--sort-by field] [--sort-desc]',
+        example: 'podio-cli filter camp-sales \'{"status": 1}\' --slim --fields title,category-4 --limit 10',
       }, 1);
     }
 
@@ -200,10 +203,13 @@ const commands = {
     const limit = getFlagValue(args, '--limit');
     const offset = getFlagValue(args, '--offset');
     const sortBy = getFlagValue(args, '--sort-by');
+    const fields = getFlagValue(args, '--fields');
     if (limit) body.limit = parseInt(limit, 10);
     if (offset) body.offset = parseInt(offset, 10);
     if (sortBy) body.sort_by = sortBy;
     if (args.includes('--sort-desc')) body.sort_desc = true;
+    if (args.includes('--slim') || fields) body.slim = true;
+    if (fields) body.fields = fields;
 
     const result = await apiCall('POST', `/api/podio/${appSlug}/items/filter`, body);
     output(result);
@@ -340,6 +346,8 @@ const commands = {
         'comment <app-slug> <item-id> <text>': 'Add a comment to an item (requires full-access key)',
       },
       flags: {
+        '--slim': 'Strip field configs and metadata for much lighter output — list/filter',
+        '--fields f1,f2': 'Only include specific fields by external_id (implies --slim) — list/filter',
         '--limit N': 'Number of items to return (default 30, max 500) — list/filter',
         '--offset N': 'Number of items to skip for pagination — list/filter',
         '--sort-by field': 'Field to sort by (e.g. created_on, title) — list/filter',
@@ -350,9 +358,9 @@ const commands = {
       examples: [
         'podio-cli setup --url https://podio.example.com --key abc123',
         'podio-cli apps',
-        'podio-cli list camp-sales',
-        'podio-cli list camp-sales --limit 10 --offset 20',
-        'podio-cli filter camp-sales \'{"status": 1}\' --limit 5',
+        'podio-cli list camp-sales --slim --limit 10',
+        'podio-cli list camp-sales --fields title,category-4,group-1-dates --limit 20',
+        'podio-cli filter camp-sales \'{"created_on":{"from":"2026-02-01","to":"2026-02-28"}}\' --slim',
         'podio-cli get camp-sales 1234567',
         'podio-cli values camp-sales 1234567',
         'podio-cli diff camp-sales 1234567 3 4',

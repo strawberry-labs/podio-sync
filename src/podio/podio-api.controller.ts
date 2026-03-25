@@ -48,7 +48,7 @@ export class PodioApiController {
 
   /**
    * List items in an app
-   * GET /api/podio/:appSlug/items?limit=30&offset=0&sort_by=created_on&sort_desc=true
+   * GET /api/podio/:appSlug/items?limit=30&offset=0&sort_by=created_on&sort_desc=true&slim=true&fields=title,status
    */
   @Get(':appSlug/items')
   @RequireAccess(ApiAccess.READ_ONLY)
@@ -58,6 +58,8 @@ export class PodioApiController {
     @Query('offset') offset?: string,
     @Query('sort_by') sortBy?: string,
     @Query('sort_desc') sortDesc?: string,
+    @Query('slim') slim?: string,
+    @Query('fields') fields?: string,
   ): Promise<any> {
     this.logger.log(`GET items from app ${appSlug}`);
 
@@ -73,7 +75,7 @@ export class PodioApiController {
 
       return {
         success: true,
-        data: result,
+        data: this.transformResult(result, slim === 'true', fields),
       };
     } catch (error) {
       this.logger.error(`Failed to list items for ${appSlug}:`, error.response?.data || error.message);
@@ -101,6 +103,8 @@ export class PodioApiController {
       offset?: number;
       sort_by?: string;
       sort_desc?: boolean;
+      slim?: boolean;
+      fields?: string;
     },
   ): Promise<any> {
     this.logger.log(`POST filter items in app ${appSlug}`);
@@ -121,7 +125,7 @@ export class PodioApiController {
 
       return {
         success: true,
-        data: result,
+        data: this.transformResult(result, body.slim, body.fields),
       };
     } catch (error) {
       this.logger.error(`Failed to filter items for ${appSlug}:`, error.response?.data || error.message);
@@ -392,6 +396,50 @@ export class PodioApiController {
         error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  /**
+   * Strip bloat from a Podio item for lighter responses.
+   * - Removes field configs, avatar images, created_via, etc.
+   * - Optionally filters to specific fields by external_id.
+   */
+  private slimItem(item: any, fieldFilter?: string[]): any {
+    const fields = (item.fields || [])
+      .filter((f: any) => !fieldFilter || fieldFilter.includes(f.external_id))
+      .map((f: any) => ({
+        external_id: f.external_id,
+        label: f.label,
+        type: f.type,
+        values: f.values,
+      }));
+
+    return {
+      item_id: item.item_id,
+      app_item_id: item.app_item_id,
+      title: item.title,
+      created_on: item.created_on,
+      last_event_on: item.last_event_on,
+      link: item.link,
+      fields,
+    };
+  }
+
+  /**
+   * Apply slim/fields transforms to a list/filter response.
+   */
+  private transformResult(result: any, slim?: boolean, fields?: string): any {
+    if (!slim && !fields) return result;
+
+    const fieldFilter = fields
+      ? fields.split(',').map((f) => f.trim())
+      : undefined;
+
+    return {
+      ...result,
+      items: (result.items || []).map((item: any) =>
+        this.slimItem(item, fieldFilter),
+      ),
+    };
   }
 
   /**
