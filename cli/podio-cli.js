@@ -215,6 +215,35 @@ const commands = {
     output(result);
   },
 
+  // -- Create item ----------------------------------------------------------
+
+  async create(args) {
+    const [appSlug, fieldsJson] = args;
+    if (!appSlug || !fieldsJson) {
+      output({
+        error: 'Usage: podio-cli create <app-slug> \'<fields-json>\'',
+        example: 'podio-cli create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
+      }, 1);
+    }
+
+    let fields;
+    try {
+      fields = JSON.parse(fieldsJson);
+    } catch {
+      output({ error: 'Invalid JSON for fields argument' }, 1);
+    }
+
+    const silent = args.includes('--silent');
+    const noHook = args.includes('--no-hook');
+
+    const result = await apiCall('POST', `/api/podio/${appSlug}/items`, {
+      fields,
+      silent,
+      hook: !noHook,
+    });
+    output(result);
+  },
+
   // -- Get full item --------------------------------------------------------
 
   async get(args) {
@@ -338,6 +367,7 @@ const commands = {
         'apps': 'List all configured Podio apps',
         'list <app-slug>': 'List items in an app (with pagination)',
         'filter <app-slug> [filters-json]': 'Filter items in an app',
+        'create <app-slug> <fields-json>': 'Create a new item (requires full-access key)',
         'get <app-slug> <item-id>': 'Get full item details',
         'values <app-slug> <item-id>': 'Get item field values only',
         'diff <app-slug> <item-id> <from> <to>': 'Get revision diff between two revisions',
@@ -361,6 +391,7 @@ const commands = {
         'podio-cli list camp-sales --slim --limit 10',
         'podio-cli list camp-sales --fields title,category-4,group-1-dates --limit 20',
         'podio-cli filter camp-sales \'{"created_on":{"from":"2026-02-01","to":"2026-02-28"}}\' --slim',
+        'podio-cli create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
         'podio-cli get camp-sales 1234567',
         'podio-cli values camp-sales 1234567',
         'podio-cli diff camp-sales 1234567 3 4',

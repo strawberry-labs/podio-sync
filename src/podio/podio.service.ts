@@ -374,6 +374,37 @@ export class PodioService implements OnModuleInit {
     return response.data;
   }
 
+  /**
+   * Create a new item in an app
+   * POST /item/app/{app_id}
+   */
+  async createItem(
+    appSlug: string,
+    fields: any[],
+    options: { hook?: boolean; silent?: boolean } = {},
+  ): Promise<{ item_id: number; title: string }> {
+    const app = this.getAppConfig(appSlug);
+    if (!app) throw new Error(`No app found with slug: ${appSlug}`);
+
+    const accessToken = await this.getAccessToken(appSlug);
+    const { hook = true, silent = false } = options;
+
+    const response = await axios.post(
+      `${this.baseUrl}/item/app/${app.appId}`,
+      { fields },
+      {
+        headers: {
+          'Authorization': `OAuth2 ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        params: { hook, silent },
+      }
+    );
+
+    this.logger.log(`Item created in ${appSlug}, item_id: ${response.data.item_id}`);
+    return response.data;
+  }
+
   getAppConfig(appSlug: string): PodioAppConfig | undefined {
     return this.apps.find(a => a.slug === appSlug);
   }

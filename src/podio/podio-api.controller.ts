@@ -14,6 +14,12 @@ import {
 import { PodioService } from './podio.service';
 import { ApiKeyGuard, ApiAccess, RequireAccess } from '../common/guards';
 
+interface CreateItemDto {
+  fields: any[];
+  hook?: boolean;
+  silent?: boolean;
+}
+
 interface UpdateItemDto {
   fields: any[];
   hook?: boolean;
@@ -129,6 +135,53 @@ export class PodioApiController {
       };
     } catch (error) {
       this.logger.error(`Failed to filter items for ${appSlug}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Create a new item in an app
+   * POST /api/podio/:appSlug/items
+   */
+  @Post(':appSlug/items')
+  @RequireAccess(ApiAccess.FULL_ACCESS)
+  async createItem(
+    @Param('appSlug') appSlug: string,
+    @Body() body: CreateItemDto,
+  ): Promise<any> {
+    this.logger.log(`POST create item in app ${appSlug}`);
+
+    this.validateAppSlug(appSlug);
+
+    if (!body.fields || !Array.isArray(body.fields)) {
+      throw new HttpException(
+        {
+          success: false,
+          error: 'fields array is required',
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    try {
+      const result = await this.podioService.createItem(
+        appSlug,
+        body.fields,
+        { hook: body.hook, silent: body.silent },
+      );
+
+      return {
+        success: true,
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to create item in ${appSlug}:`, error.response?.data || error.message);
       throw new HttpException(
         {
           success: false,

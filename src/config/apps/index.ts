@@ -4,6 +4,8 @@ import { iaSalesApp } from './ia-sales.config';
 import { overseasCampSalesApp } from './overseas-camp-sales.config';
 import { schoolsApp } from './schools.config';
 import { opportunitiesApp } from './opportunities.config';
+import { staffMemberApp } from './staff-member.config';
+import { hiringProcessApp } from './hiring-process.config';
 
 /**
  * All Podio app definitions.
@@ -18,4 +20,6 @@ export const appDefinitions: PodioAppDefinition[] = [
   overseasCampSalesApp,
   schoolsApp,
   opportunitiesApp,
+  staffMemberApp,
+  hiringProcessApp,
 ];
