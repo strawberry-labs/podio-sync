@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "bin": {
-    "podio-cli": "./cli/podio-cli.js"
+    "podio": "./cli/podio.js"
   },
   "scripts": {
     "build": "nest build",

@@ -4,9 +4,9 @@
  * Podio CLI — a simple wrapper around the podio-sync REST API.
  * Designed for AI agents and quick scripting.
  *
- * Setup:    podio-cli setup --url <base-url> --key <api-key>
- * Usage:    podio-cli <command> [args...]
- * Config:   ~/.podio-cli.json
+ * Setup:    podio setup --url <base-url> --key <api-key>
+ * Usage:    podio <command> [args...]
+ * Config:   ~/.podio.json
  *
  * All output is JSON. Exit code 0 = success, 1 = error.
  */
@@ -19,7 +19,7 @@ const readline = require('readline');
 // Config
 // ---------------------------------------------------------------------------
 
-const CONFIG_PATH = path.join(require('os').homedir(), '.podio-cli.json');
+const CONFIG_PATH = path.join(require('os').homedir(), '.podio.json');
 
 function loadConfig() {
   try {
@@ -36,7 +36,7 @@ function saveConfig(config) {
 function requireConfig() {
   const config = loadConfig();
   if (!config || !config.url || !config.key) {
-    output({ error: 'Not configured. Run: podio-cli setup --url <base-url> --key <api-key>' }, 1);
+    output({ error: 'Not configured. Run: podio setup --url <base-url> --key <api-key>' }, 1);
   }
   return config;
 }
@@ -134,7 +134,7 @@ const commands = {
   async config() {
     const config = loadConfig();
     if (!config) {
-      output({ error: 'Not configured. Run: podio-cli setup --url <base-url> --key <api-key>' }, 1);
+      output({ error: 'Not configured. Run: podio setup --url <base-url> --key <api-key>' }, 1);
     }
     output({
       url: config.url,
@@ -157,7 +157,7 @@ const commands = {
   async list(args) {
     const appSlug = stripFlags(args)[0];
     if (!appSlug) {
-      output({ error: 'Usage: podio-cli list <app-slug> [--slim] [--fields f1,f2] [--limit N] [--offset N] [--sort-by field] [--sort-desc]' }, 1);
+      output({ error: 'Usage: podio list <app-slug> [--slim] [--fields f1,f2] [--limit N] [--offset N] [--sort-by field] [--sort-desc]' }, 1);
     }
 
     const params = new URLSearchParams();
@@ -185,8 +185,8 @@ const commands = {
     const filtersJson = positional[1];
     if (!appSlug) {
       output({
-        error: 'Usage: podio-cli filter <app-slug> [\'<filters-json>\'] [--slim] [--fields f1,f2] [--limit N] [--offset N] [--sort-by field] [--sort-desc]',
-        example: 'podio-cli filter camp-sales \'{"status": 1}\' --slim --fields title,category-4 --limit 10',
+        error: 'Usage: podio filter <app-slug> [\'<filters-json>\'] [--slim] [--fields f1,f2] [--limit N] [--offset N] [--sort-by field] [--sort-desc]',
+        example: 'podio filter camp-sales \'{"status": 1}\' --slim --fields title,category-4 --limit 10',
       }, 1);
     }
 
@@ -221,8 +221,8 @@ const commands = {
     const [appSlug, fieldsJson] = args;
     if (!appSlug || !fieldsJson) {
       output({
-        error: 'Usage: podio-cli create <app-slug> \'<fields-json>\'',
-        example: 'podio-cli create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
+        error: 'Usage: podio create <app-slug> \'<fields-json>\'',
+        example: 'podio create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
       }, 1);
     }
 
@@ -249,7 +249,7 @@ const commands = {
   async get(args) {
     const [appSlug, itemId] = args;
     if (!appSlug || !itemId) {
-      output({ error: 'Usage: podio-cli get <app-slug> <item-id>' }, 1);
+      output({ error: 'Usage: podio get <app-slug> <item-id>' }, 1);
     }
     const result = await apiCall('GET', `/api/podio/${appSlug}/items/${itemId}`);
     output(result);
@@ -260,7 +260,7 @@ const commands = {
   async values(args) {
     const [appSlug, itemId] = args;
     if (!appSlug || !itemId) {
-      output({ error: 'Usage: podio-cli values <app-slug> <item-id>' }, 1);
+      output({ error: 'Usage: podio values <app-slug> <item-id>' }, 1);
     }
     const result = await apiCall('GET', `/api/podio/${appSlug}/items/${itemId}/values`);
     output(result);
@@ -271,7 +271,7 @@ const commands = {
   async diff(args) {
     const [appSlug, itemId, from, to] = args;
     if (!appSlug || !itemId || !from || !to) {
-      output({ error: 'Usage: podio-cli diff <app-slug> <item-id> <from-rev> <to-rev>' }, 1);
+      output({ error: 'Usage: podio diff <app-slug> <item-id> <from-rev> <to-rev>' }, 1);
     }
     const result = await apiCall('GET', `/api/podio/${appSlug}/items/${itemId}/revisions/${from}/${to}`);
     output(result);
@@ -283,8 +283,8 @@ const commands = {
     const [appSlug, itemId, fieldsJson] = args;
     if (!appSlug || !itemId || !fieldsJson) {
       output({
-        error: 'Usage: podio-cli update <app-slug> <item-id> \'<fields-json>\'',
-        example: 'podio-cli update camp-sales 123 \'[{"external_id":"status","values":[{"value":"Active"}]}]\'',
+        error: 'Usage: podio update <app-slug> <item-id> \'<fields-json>\'',
+        example: 'podio update camp-sales 123 \'[{"external_id":"status","values":[{"value":"Active"}]}]\'',
       }, 1);
     }
 
@@ -312,8 +312,8 @@ const commands = {
     const [appSlug, itemId, fieldId, valueJson] = args;
     if (!appSlug || !itemId || !fieldId || !valueJson) {
       output({
-        error: 'Usage: podio-cli update-field <app-slug> <item-id> <field-id> \'<value-json>\'',
-        example: 'podio-cli update-field camp-sales 123 status \'[{"value":"Active"}]\'',
+        error: 'Usage: podio update-field <app-slug> <item-id> <field-id> \'<value-json>\'',
+        example: 'podio update-field camp-sales 123 status \'[{"value":"Active"}]\'',
       }, 1);
     }
 
@@ -341,7 +341,7 @@ const commands = {
     const [appSlug, itemId, ...textParts] = args;
     const text = textParts.filter(p => !p.startsWith('--')).join(' ');
     if (!appSlug || !itemId || !text) {
-      output({ error: 'Usage: podio-cli comment <app-slug> <item-id> <comment text>' }, 1);
+      output({ error: 'Usage: podio comment <app-slug> <item-id> <comment text>' }, 1);
     }
 
     const silent = args.includes('--silent');
@@ -359,7 +359,7 @@ const commands = {
 
   async help() {
     output({
-      name: 'podio-cli',
+      name: 'podio',
       description: 'CLI wrapper for the podio-sync REST API. All output is JSON.',
       commands: {
         'setup --url <base-url> --key <api-key>': 'Configure API connection (one-time)',
@@ -386,16 +386,16 @@ const commands = {
         '--no-hook': 'Don\'t trigger Podio webhooks — update/update-field/comment',
       },
       examples: [
-        'podio-cli setup --url https://podio.example.com --key abc123',
-        'podio-cli apps',
-        'podio-cli list camp-sales --slim --limit 10',
-        'podio-cli list camp-sales --fields title,category-4,group-1-dates --limit 20',
-        'podio-cli filter camp-sales \'{"created_on":{"from":"2026-02-01","to":"2026-02-28"}}\' --slim',
-        'podio-cli create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
-        'podio-cli get camp-sales 1234567',
-        'podio-cli values camp-sales 1234567',
-        'podio-cli diff camp-sales 1234567 3 4',
-        'podio-cli comment camp-sales 1234567 "Updated the status to Active"',
+        'podio setup --url https://podio.example.com --key abc123',
+        'podio apps',
+        'podio list camp-sales --slim --limit 10',
+        'podio list camp-sales --fields title,category-4,group-1-dates --limit 20',
+        'podio filter camp-sales \'{"created_on":{"from":"2026-02-01","to":"2026-02-28"}}\' --slim',
+        'podio create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
+        'podio get camp-sales 1234567',
+        'podio values camp-sales 1234567',
+        'podio diff camp-sales 1234567 3 4',
+        'podio comment camp-sales 1234567 "Updated the status to Active"',
       ],
       configPath: CONFIG_PATH,
     });
@@ -442,7 +442,7 @@ async function main() {
   }
 
   if (!commands[command]) {
-    output({ error: `Unknown command: ${command}. Run 'podio-cli help' for usage.` }, 1);
+    output({ error: `Unknown command: ${command}. Run 'podio help' for usage.` }, 1);
   }
 
   await commands[command](commandArgs);
