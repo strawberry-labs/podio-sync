@@ -53,6 +53,45 @@ export class PodioApiController {
   constructor(private readonly podioService: PodioService) {}
 
   /**
+   * Get the full app schema — every field defined on the app, including empty ones.
+   *
+   * Item responses only include fields that have values, so clients should call
+   * this endpoint first to understand the complete set of fields available.
+   *
+   * GET /api/podio/:appSlug/schema?slim=true
+   *
+   * When slim=true, the response is reduced to a compact list of
+   * { external_id, field_id, label, type, status, required, options? }.
+   */
+  @Get(':appSlug/schema')
+  @RequireAccess(ApiAccess.READ_ONLY)
+  async getAppSchema(
+    @Param('appSlug') appSlug: string,
+    @Query('slim') slim?: string,
+  ): Promise<any> {
+    this.logger.log(`GET schema for app ${appSlug}`);
+
+    this.validateAppSlug(appSlug);
+
+    try {
+      const schema = await this.podioService.getAppSchema(appSlug);
+      return {
+        success: true,
+        data: slim === 'true' ? this.slimSchema(schema) : schema,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get schema for ${appSlug}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * List items in an app
    * GET /api/podio/:appSlug/items?limit=30&offset=0&sort_by=created_on&sort_desc=true&slim=true&fields=title,status
    */
@@ -449,6 +488,34 @@ export class PodioApiController {
         error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  /**
+   * Reduce an app schema response to just the field list metadata.
+   * Keeps category options (since they're small and useful for writes) but
+   * drops description/default_value/mapping/etc.
+   */
+  private slimSchema(schema: any): any {
+    const fields = (schema.fields || []).map((f: any) => ({
+      external_id: f.external_id,
+      field_id: f.field_id,
+      label: f.label,
+      type: f.type,
+      status: f.status,
+      required: f.config?.required ?? false,
+      ...(f.config?.settings?.options
+        ? { options: f.config.settings.options.map((o: any) => ({ id: o.id, text: o.text, status: o.status })) }
+        : {}),
+    }));
+
+    return {
+      app_id: schema.app_id,
+      name: schema.config?.name,
+      item_name: schema.config?.item_name,
+      status: schema.status,
+      field_count: fields.length,
+      fields,
+    };
   }
 
   /**

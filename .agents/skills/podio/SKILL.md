@@ -15,7 +15,40 @@ podio apps
 
 This returns all configured apps with their slugs, webhook endpoints, and monitored fields. Use the slug values from this response for all subsequent commands.
 
+## Discovering Fields — Read This First
+
+**Item responses only include fields that have a value on that specific item.** If a field is empty, it is silently omitted from `list`, `filter`, `get`, and `values` responses. That means you CANNOT rely on any one item to learn the full set of fields an app has — items with more fields filled in will appear to have "more" fields than items with fewer values, even though the app schema is identical.
+
+Before you reason about an app's structure, filter on fields, or build an update/create payload, **get the app schema**:
+
+```bash
+podio schema <app-slug> --slim
+```
+
+This calls Podio's `GET /app/{app_id}` and returns every field defined on the app — regardless of whether any item has ever set a value for it — along with `external_id`, `field_id`, `label`, `type`, `required`, `status`, and (for category fields) the full list of option `id`/`text` pairs you'll need when writing.
+
+Drop `--slim` only if you need the raw Podio response with full configs, descriptions, calculation scripts, etc.
+
+Typical flow:
+1. `podio apps` → find the slug
+2. `podio schema <slug> --slim` → learn every field and its type
+3. `podio list <slug> --slim --limit 1` → see what a real populated item looks like
+4. Then `filter` / `get` / `update` / `create` as needed
+
 ## Commands
+
+### Get app schema
+
+```bash
+podio schema <app-slug> [--slim]
+```
+
+Returns every field configured on the app (including empty ones). Use this to discover all available fields before filtering, creating, or updating items. See [Discovering Fields](#discovering-fields--read-this-first) above.
+
+Example:
+```bash
+podio schema hiring-process --slim
+```
 
 ### List items in an app
 
@@ -185,12 +218,13 @@ Fields have a `type` that determines how `values` are structured:
 ## Recommended Workflow
 
 1. **Run `podio apps`** first to discover available apps and their slugs
-2. **Always use `--slim`** for list and filter commands to keep output manageable
-3. **Use `--fields`** when you know which fields you need — this gives the smallest responses
-4. Start with a small `--limit` (5-10) to understand the data shape, then increase
-5. Use `filter` with date ranges or category values to narrow results before paginating
-6. Use `get` or `values` only when you need full details for a specific `item_id`
-7. The `filtered` count in the response tells you total matching items — use it to plan pagination
+2. **Run `podio schema <slug> --slim`** to discover every field the app has — item responses omit empty fields, so this is the only reliable way to see the full schema
+3. **Always use `--slim`** for list and filter commands to keep output manageable
+4. **Use `--fields`** when you know which fields you need — this gives the smallest responses
+5. Start with a small `--limit` (5-10) to understand the data shape, then increase
+6. Use `filter` with date ranges or category values to narrow results before paginating
+7. Use `get` or `values` only when you need full details for a specific `item_id`
+8. The `filtered` count in the response tells you total matching items — use it to plan pagination
 
 ## Write Operation Flags
 

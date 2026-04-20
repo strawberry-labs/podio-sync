@@ -152,6 +152,22 @@ const commands = {
     output(json);
   },
 
+  // -- Get app schema -------------------------------------------------------
+
+  async schema(args) {
+    const appSlug = stripFlags(args)[0];
+    if (!appSlug) {
+      output({ error: 'Usage: podio schema <app-slug> [--slim]' }, 1);
+    }
+
+    const params = new URLSearchParams();
+    if (args.includes('--slim')) params.set('slim', 'true');
+
+    const qs = params.toString();
+    const result = await apiCall('GET', `/api/podio/${appSlug}/schema${qs ? '?' + qs : ''}`);
+    output(result);
+  },
+
   // -- List items -----------------------------------------------------------
 
   async list(args) {
@@ -365,6 +381,7 @@ const commands = {
         'setup --url <base-url> --key <api-key>': 'Configure API connection (one-time)',
         'config': 'Show current configuration',
         'apps': 'List all configured Podio apps',
+        'schema <app-slug>': 'Get the full app schema — every defined field, including empty ones',
         'list <app-slug>': 'List items in an app (with pagination)',
         'filter <app-slug> [filters-json]': 'Filter items in an app',
         'create <app-slug> <fields-json>': 'Create a new item (requires full-access key)',
@@ -376,7 +393,7 @@ const commands = {
         'comment <app-slug> <item-id> <text>': 'Add a comment to an item (requires full-access key)',
       },
       flags: {
-        '--slim': 'Strip field configs and metadata for much lighter output — list/filter',
+        '--slim': 'Strip field configs and metadata for much lighter output — list/filter/schema',
         '--fields f1,f2': 'Only include specific fields by external_id (implies --slim) — list/filter',
         '--limit N': 'Number of items to return (default 30, max 500) — list/filter',
         '--offset N': 'Number of items to skip for pagination — list/filter',
@@ -388,6 +405,7 @@ const commands = {
       examples: [
         'podio setup --url https://podio.example.com --key abc123',
         'podio apps',
+        'podio schema hiring-process --slim',
         'podio list camp-sales --slim --limit 10',
         'podio list camp-sales --fields title,category-4,group-1-dates --limit 20',
         'podio filter camp-sales \'{"created_on":{"from":"2026-02-01","to":"2026-02-28"}}\' --slim',

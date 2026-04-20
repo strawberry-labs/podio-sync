@@ -309,6 +309,32 @@ export class PodioService implements OnModuleInit {
   }
 
   /**
+   * Get the full app schema (definition) from Podio, including every field
+   * configured on the app — even ones that no item has ever set.
+   *
+   * Useful because item responses (list/filter/get) only include fields that
+   * have values on that specific item, so they can't be relied on to discover
+   * the complete set of fields.
+   *
+   * GET /app/{app_id}
+   */
+  async getAppSchema(appSlug: string): Promise<any> {
+    const app = this.getAppConfig(appSlug);
+    if (!app) throw new Error(`No app found with slug: ${appSlug}`);
+
+    const accessToken = await this.getAccessToken(appSlug);
+
+    const response = await axios.get(
+      `${this.baseUrl}/app/${app.appId}`,
+      {
+        headers: { 'Authorization': `OAuth2 ${accessToken}` },
+      },
+    );
+
+    return response.data;
+  }
+
+  /**
    * Get items for an app
    * GET /item/app/{app_id}
    */
