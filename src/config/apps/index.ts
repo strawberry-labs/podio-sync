@@ -5,6 +5,7 @@ import { overseasCampSalesApp } from './overseas-camp-sales.config';
 import { schoolsApp } from './schools.config';
 import { opportunitiesApp } from './opportunities.config';
 import { staffMemberApp } from './staff-member.config';
+import { staffApp } from './staff.config';
 import { hiringProcessApp } from './hiring-process.config';
 
 /**
@@ -21,5 +22,6 @@ export const appDefinitions: PodioAppDefinition[] = [
   schoolsApp,
   opportunitiesApp,
   staffMemberApp,
+  staffApp,
   hiringProcessApp,
 ];
