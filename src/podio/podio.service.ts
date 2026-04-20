@@ -162,6 +162,59 @@ export class PodioService implements OnModuleInit {
     return response.data;
   }
 
+  /**
+   * Get any item by its global item_id, without needing to know which app it
+   * belongs to. Tries each configured app's access token in turn until one
+   * succeeds. Useful for following `app`-type references across apps.
+   *
+   * GET /item/{item_id}
+   */
+  async getItemByIdAcrossApps(itemId: string): Promise<any> {
+    let lastError: any;
+    for (const app of this.apps) {
+      if (!app.appId || !app.appToken) continue;
+      try {
+        const accessToken = await this.getAccessToken(app.slug);
+        const response = await axios.get(`${this.baseUrl}/item/${itemId}`, {
+          headers: { 'Authorization': `OAuth2 ${accessToken}` },
+        });
+        return response.data;
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        // Keep trying on 403/404 (wrong app), bail on other errors
+        if (status !== 403 && status !== 404) throw err;
+      }
+    }
+    throw lastError || new Error(`Item ${itemId} not accessible via any configured app token`);
+  }
+
+  /**
+   * Get items that reference the given item, grouped by app.
+   * GET /item/{item_id}/reference/
+   *
+   * Tries each configured app's token like getItemByIdAcrossApps.
+   */
+  async getItemReferences(itemId: string): Promise<any> {
+    let lastError: any;
+    for (const app of this.apps) {
+      if (!app.appId || !app.appToken) continue;
+      try {
+        const accessToken = await this.getAccessToken(app.slug);
+        const response = await axios.get(
+          `${this.baseUrl}/item/${itemId}/reference/`,
+          { headers: { 'Authorization': `OAuth2 ${accessToken}` } },
+        );
+        return response.data;
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+        if (status !== 403 && status !== 404) throw err;
+      }
+    }
+    throw lastError || new Error(`References for item ${itemId} not accessible via any configured app token`);
+  }
+
   async getRevisionDiff(
     appSlug: string,
     itemId: string,

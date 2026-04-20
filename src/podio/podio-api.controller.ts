@@ -53,6 +53,141 @@ export class PodioApiController {
   constructor(private readonly podioService: PodioService) {}
 
   /**
+   * Get any item by its global item_id, without needing an app slug.
+   * Tries each configured app's token until one succeeds.
+   *
+   * GET /api/podio/items/:itemId
+   */
+  @Get('items/:itemId')
+  @RequireAccess(ApiAccess.READ_ONLY)
+  async getItemById(
+    @Param('itemId') itemId: string,
+  ): Promise<any> {
+    this.logger.log(`GET item ${itemId} (no slug)`);
+
+    try {
+      const item = await this.podioService.getItemByIdAcrossApps(itemId);
+      return { success: true, data: item };
+    } catch (error) {
+      this.logger.error(`Failed to get item ${itemId}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get items that reference this item, grouped by app.
+   * GET /api/podio/items/:itemId/references
+   */
+  @Get('items/:itemId/references')
+  @RequireAccess(ApiAccess.READ_ONLY)
+  async getItemReferences(
+    @Param('itemId') itemId: string,
+  ): Promise<any> {
+    this.logger.log(`GET references for item ${itemId}`);
+
+    try {
+      const refs = await this.podioService.getItemReferences(itemId);
+      return { success: true, data: refs };
+    } catch (error) {
+      this.logger.error(`Failed to get references for item ${itemId}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get a compact list of all items related to this one — both outgoing
+   * (fields of type "app" pointing to other items) and incoming (items
+   * that reference this one).
+   *
+   * GET /api/podio/items/:itemId/related
+   */
+  @Get('items/:itemId/related')
+  @RequireAccess(ApiAccess.READ_ONLY)
+  async getRelatedItems(
+    @Param('itemId') itemId: string,
+  ): Promise<any> {
+    this.logger.log(`GET related items for ${itemId}`);
+
+    try {
+      const [item, incoming] = await Promise.all([
+        this.podioService.getItemByIdAcrossApps(itemId),
+        this.podioService.getItemReferences(itemId).catch(() => []),
+      ]);
+
+      const outgoing: any[] = [];
+      for (const f of item.fields || []) {
+        if (f.type !== 'app') continue;
+        for (const v of f.values || []) {
+          if (v.value) {
+            outgoing.push({
+              via_field: f.external_id,
+              via_field_label: f.label,
+              item_id: v.value.item_id,
+              app_item_id: v.value.app_item_id,
+              title: v.value.title,
+              app_id: v.value.app?.app_id,
+              app_name: v.value.app?.config?.name || v.value.app?.name,
+              link: v.value.link,
+            });
+          }
+        }
+      }
+
+      const incomingFlat: any[] = [];
+      for (const group of incoming || []) {
+        const appName = group.app?.config?.name || group.app?.name;
+        const appId = group.app?.app_id;
+        for (const ref of group.items || []) {
+          incomingFlat.push({
+            item_id: ref.item_id,
+            app_item_id: ref.app_item_id,
+            title: ref.title,
+            app_id: appId,
+            app_name: appName,
+            link: ref.link,
+          });
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          item_id: item.item_id,
+          app_item_id: item.app_item_id,
+          title: item.title,
+          app_id: item.app?.app_id,
+          app_name: item.app?.config?.name || item.app?.name,
+          outgoing,
+          incoming: incomingFlat,
+          outgoing_count: outgoing.length,
+          incoming_count: incomingFlat.length,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get related items for ${itemId}:`, error.response?.data || error.message);
+      throw new HttpException(
+        {
+          success: false,
+          error: error.response?.data?.error_description || error.message,
+        },
+        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
    * Get the full app schema — every field defined on the app, including empty ones.
    *
    * Item responses only include fields that have values, so clients should call

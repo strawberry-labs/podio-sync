@@ -260,6 +260,39 @@ const commands = {
     output(result);
   },
 
+  // -- Get item by raw item_id (no slug) ------------------------------------
+
+  async 'get-ref'(args) {
+    const [itemId] = args;
+    if (!itemId) {
+      output({ error: 'Usage: podio get-ref <item-id>' }, 1);
+    }
+    const result = await apiCall('GET', `/api/podio/items/${itemId}`);
+    output(result);
+  },
+
+  // -- Incoming references (items that reference THIS item) -----------------
+
+  async refs(args) {
+    const [itemId] = args;
+    if (!itemId) {
+      output({ error: 'Usage: podio refs <item-id>' }, 1);
+    }
+    const result = await apiCall('GET', `/api/podio/items/${itemId}/references`);
+    output(result);
+  },
+
+  // -- All related items (outgoing app refs + incoming refs) ----------------
+
+  async related(args) {
+    const [itemId] = args;
+    if (!itemId) {
+      output({ error: 'Usage: podio related <item-id>' }, 1);
+    }
+    const result = await apiCall('GET', `/api/podio/items/${itemId}/related`);
+    output(result);
+  },
+
   // -- Get full item --------------------------------------------------------
 
   async get(args) {
@@ -386,6 +419,9 @@ const commands = {
         'filter <app-slug> [filters-json]': 'Filter items in an app',
         'create <app-slug> <fields-json>': 'Create a new item (requires full-access key)',
         'get <app-slug> <item-id>': 'Get full item details',
+        'get-ref <item-id>': 'Get any item by raw item_id (no slug needed) — for following cross-app references',
+        'refs <item-id>': 'List items that reference this item (incoming refs), grouped by app',
+        'related <item-id>': 'Compact list of all related items — outgoing app-field refs + incoming refs',
         'values <app-slug> <item-id>': 'Get item field values only',
         'diff <app-slug> <item-id> <from> <to>': 'Get revision diff between two revisions',
         'update <app-slug> <item-id> <fields-json>': 'Update item fields (requires full-access key)',
@@ -411,6 +447,8 @@ const commands = {
         'podio filter camp-sales \'{"created_on":{"from":"2026-02-01","to":"2026-02-28"}}\' --slim',
         'podio create staff-member \'[{"external_id":"name","values":[{"value":"Jane Doe"}]}]\'',
         'podio get camp-sales 1234567',
+        'podio related 1234567',
+        'podio get-ref 3249825589',
         'podio values camp-sales 1234567',
         'podio diff camp-sales 1234567 3 4',
         'podio comment camp-sales 1234567 "Updated the status to Active"',

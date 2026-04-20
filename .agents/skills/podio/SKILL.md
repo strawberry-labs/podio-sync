@@ -105,6 +105,32 @@ podio values <app-slug> <item-id>
 
 Returns only the field values for an item (lighter response than `get`).
 
+### Following cross-app references
+
+Podio items often link to items in other apps (e.g., a Hiring Process item's `applicant` field points to an item in the Internal Applications app). When you want to follow those links you usually only have the target `item_id` — not its app slug. Three commands handle this:
+
+```bash
+# Get any item by raw item_id (tries each configured app's token)
+podio get-ref <item-id>
+
+# List items that reference this item (incoming), grouped by app
+podio refs <item-id>
+
+# Compact combined view — outgoing app-field refs + incoming refs,
+# each with item_id, title, app_name, and a link
+podio related <item-id>
+```
+
+`related` is the best starting point: it returns a clean list you can then drill into with `get-ref`. Typical flow:
+
+```bash
+podio get hiring-process 3279960464          # find an item
+podio related 3279960464                     # see its outgoing + incoming links
+podio get-ref 3249825589                     # follow one of them (no slug needed)
+```
+
+Outgoing refs come from fields with `type: "app"` on the source item. Incoming refs come from Podio's `GET /item/{item_id}/reference/` endpoint.
+
 ### Get revision diff
 
 ```bash
@@ -225,6 +251,15 @@ Fields have a `type` that determines how `values` are structured:
 6. Use `filter` with date ranges or category values to narrow results before paginating
 7. Use `get` or `values` only when you need full details for a specific `item_id`
 8. The `filtered` count in the response tells you total matching items — use it to plan pagination
+
+## Related / Referenced Items
+
+Podio items can reference each other via `app`-type fields. The item response from `get` / `list` already contains this information — but in two different forms:
+
+- **Outgoing references** — look at `fields[]` where `type === "app"`. Each value has `{ item_id, title, app: { name, app_id } }`. These are items this item points TO.
+- **Incoming references** — the top-level `refs` array on the item response. These are items that point back TO this one. (The same data is available more cleanly via `podio refs <item-id>`.)
+
+If you only need to know *what's related*, use `podio related <item-id>` — it returns both directions in a compact shape. To then fetch details of a related item, use `podio get-ref <item-id>` (works regardless of which app the target item lives in).
 
 ## Write Operation Flags
 
