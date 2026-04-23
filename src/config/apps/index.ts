@@ -7,6 +7,7 @@ import { opportunitiesApp } from './opportunities.config';
 import { staffMemberApp } from './staff-member.config';
 import { staffApp } from './staff.config';
 import { hiringProcessApp } from './hiring-process.config';
+import { leadershipKpiFeedbackApp } from './leadership-kpi-feedback.config';
 
 /**
  * All Podio app definitions.
@@ -24,4 +25,5 @@ export const appDefinitions: PodioAppDefinition[] = [
   staffMemberApp,
   staffApp,
   hiringProcessApp,
+  leadershipKpiFeedbackApp,
 ];
