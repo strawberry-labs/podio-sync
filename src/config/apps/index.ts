@@ -10,6 +10,7 @@ import { hiringProcessApp } from './hiring-process.config';
 import { leadershipKpiFeedbackApp } from './leadership-kpi-feedback.config';
 import { staffObservationsApp } from './staff-observations.config';
 import { teachersFeedbackApp } from './teachers-feedback.config';
+import { assessmentLogsApp } from './assessment-logs.config';
 
 /**
  * All Podio app definitions.
@@ -30,4 +31,5 @@ export const appDefinitions: PodioAppDefinition[] = [
   leadershipKpiFeedbackApp,
   staffObservationsApp,
   teachersFeedbackApp,
+  assessmentLogsApp,
 ];
