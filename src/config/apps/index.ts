@@ -11,6 +11,9 @@ import { leadershipKpiFeedbackApp } from './leadership-kpi-feedback.config';
 import { staffObservationsApp } from './staff-observations.config';
 import { teachersFeedbackApp } from './teachers-feedback.config';
 import { assessmentLogsApp } from './assessment-logs.config';
+import { vehicleRequestFormApp } from './vehicle-request-form.config';
+import { trafficFinesApp } from './traffic-fines.config';
+import { vehicleSignOutStartApp } from './vehicle-sign-out-start.config';
 
 /**
  * All Podio app definitions.
@@ -32,4 +35,7 @@ export const appDefinitions: PodioAppDefinition[] = [
   staffObservationsApp,
   teachersFeedbackApp,
   assessmentLogsApp,
+  vehicleRequestFormApp,
+  trafficFinesApp,
+  vehicleSignOutStartApp,
 ];
