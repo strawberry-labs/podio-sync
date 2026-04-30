@@ -14,6 +14,10 @@ import { assessmentLogsApp } from './assessment-logs.config';
 import { vehicleRequestFormApp } from './vehicle-request-form.config';
 import { trafficFinesApp } from './traffic-fines.config';
 import { vehicleSignOutStartApp } from './vehicle-sign-out-start.config';
+import { dmDailyLogApp } from './dm-daily-log.config';
+import { holidayRequestApp } from './holiday-request.config';
+import { contactsApp } from './contacts.config';
+import { ajAssessmentsApp } from './aj-assessments.config';
 
 /**
  * All Podio app definitions.
@@ -38,4 +42,8 @@ export const appDefinitions: PodioAppDefinition[] = [
   vehicleRequestFormApp,
   trafficFinesApp,
   vehicleSignOutStartApp,
+  dmDailyLogApp,
+  holidayRequestApp,
+  contactsApp,
+  ajAssessmentsApp,
 ];
