@@ -19,6 +19,7 @@ import { holidayRequestApp } from './holiday-request.config';
 import { contactsApp } from './contacts.config';
 import { ajAssessmentsApp } from './aj-assessments.config';
 import { ajInstructorReportSheetsApp } from './aj-instructor-report-sheets.config';
+import { visaProcessingApp } from './visa-processing.config';
 
 /**
  * All Podio app definitions.
@@ -48,4 +49,5 @@ export const appDefinitions: PodioAppDefinition[] = [
   contactsApp,
   ajAssessmentsApp,
   ajInstructorReportSheetsApp,
+  visaProcessingApp,
 ];
