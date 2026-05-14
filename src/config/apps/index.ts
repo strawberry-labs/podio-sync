@@ -20,6 +20,8 @@ import { contactsApp } from './contacts.config';
 import { ajAssessmentsApp } from './aj-assessments.config';
 import { ajInstructorReportSheetsApp } from './aj-instructor-report-sheets.config';
 import { visaProcessingApp } from './visa-processing.config';
+import { programReportFeedbackIntlApp } from './program-report-feedback-intl.config';
+import { programReportsApp } from './program-reports.config';
 
 /**
  * All Podio app definitions.
@@ -50,4 +52,6 @@ export const appDefinitions: PodioAppDefinition[] = [
   ajAssessmentsApp,
   ajInstructorReportSheetsApp,
   visaProcessingApp,
+  programReportFeedbackIntlApp,
+  programReportsApp,
 ];
